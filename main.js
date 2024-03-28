@@ -2,7 +2,6 @@ const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
-const { exec } = require('child_process');
 
 const bot = new Telegraf('6806028440:AAG_xNXCcfLuHAgGNZ_dn7PfJ3bHukjxd3Y');
 
@@ -10,8 +9,16 @@ bot.start((ctx) => ctx.reply('Welcome to the Video Watermark Bot! Send me a vide
 
 bot.on('video', async (ctx) => {
     const video = ctx.message.video;
+    const videoSizeMB = Math.ceil(video.file_size / (1024 * 1024)); // Convert bytes to MB
 
-    // Create downloads folder if it doesn't exist
+    // Check if the video size is below a certain threshold before watermarking
+    const MAX_VIDEO_SIZE_MB = 50; // Set your desired threshold (e.g., 50 MB)
+    if (videoSizeMB > MAX_VIDEO_SIZE_MB) {
+        ctx.reply(`Sorry, the video size exceeds the maximum allowed limit (${MAX_VIDEO_SIZE_MB} MB). Please send a smaller video.`);
+        return;
+    }
+
+    // Create a downloads folder if it doesn't exist
     const downloadsFolderPath = './downloads';
     if (!fs.existsSync(downloadsFolderPath)) {
         fs.mkdirSync(downloadsFolderPath);
@@ -39,7 +46,7 @@ bot.on('video', async (ctx) => {
 async function watermarkVideo(inputPath, outputPath, text, ctx) {
     return new Promise((resolve, reject) => {
         const command = ffmpeg(inputPath)
-            .videoFilters(`drawtext=text='${text}':x=(w-text_w)/2:y=(h-text_h)/2`)
+            .videoFilters(`drawtext=text='${text}':x=(w-text_w)/2:y=(h-text_h)-10:fontsize=24:fontcolor=white`)
             .output(outputPath)
             .on('start', (commandLine) => {
                 console.log('FFmpeg command: ', commandLine);
