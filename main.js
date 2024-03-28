@@ -6,7 +6,9 @@ const ffmpeg = require('fluent-ffmpeg');
 
 const bot = new Telegraf('6806028440:AAG_xNXCcfLuHAgGNZ_dn7PfJ3bHukjxd3Y');
 
-bot.start((ctx) => ctx.reply('Welcome to the Video Watermark Bot! Send me a video file to watermark it with @oremium.'));
+bot.start((ctx) => {
+    ctx.reply('Welcome to the Video Watermark Bot! Send me a video file to watermark it with @oremium.');
+});
 
 bot.on('video', async (ctx) => {
     const video = ctx.message.video;
