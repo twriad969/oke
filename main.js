@@ -46,7 +46,7 @@ bot.on('video', async (ctx) => {
 async function watermarkVideo(inputPath, outputPath, text, ctx) {
     return new Promise((resolve, reject) => {
         const command = ffmpeg(inputPath)
-            .videoFilters(`drawtext=text='${text}':x=(w-text_w)/2:y=(h-text_h)-10:fontsize=24:fontcolor=white`)
+            .videoFilters(`drawtext=text='${text}':x=(w-text_w)/2:y=h-th-10:fontsize=24:fontcolor=white`)
             .output(outputPath)
             .on('start', (commandLine) => {
                 console.log('FFmpeg command: ', commandLine);
