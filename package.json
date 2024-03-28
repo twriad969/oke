@@ -11,7 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.25.0",
-    "fluent-ffmpeg": "^2.5.1",
+    "fluent-ffmpeg": "^2.8.0", // Try using a different version range
     "telegraf": "^4.7.2"
   }
 }
