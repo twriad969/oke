@@ -1,6 +1,7 @@
 const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const ffmpeg = require('fluent-ffmpeg');
 
 const bot = new Telegraf('6806028440:AAG_xNXCcfLuHAgGNZ_dn7PfJ3bHukjxd3Y');
@@ -26,8 +27,19 @@ bot.on('video', async (ctx) => {
 
     // Download video
     const videoPath = path.join(downloadsFolderPath, `${video.file_id}.mp4`);
-    await ctx.telegram.getFile(video.file_id).then((file) => {
-        ctx.telegram.downloadFile(file.file_path, videoPath);
+    const writer = fs.createWriteStream(videoPath);
+
+    const response = await axios({
+        url: `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${video.file_path}`,
+        method: 'GET',
+        responseType: 'stream'
+    });
+
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
     });
 
     // Watermark video
