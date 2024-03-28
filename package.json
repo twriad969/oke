@@ -1,19 +1,16 @@
 {
-  "name": "your-project-name",
+  "name": "telegram-video-watermark-bot",
   "version": "1.0.0",
-  "description": "Description of your project",
+  "description": "A Telegram bot to watermark videos with @oremium",
   "main": "main.js",
   "scripts": {
     "start": "node main.js"
   },
-  "keywords": [],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.19.0",
     "dotenv": "^10.0.0",
-    "express": "^4.17.1",
-    "node-telegram-bot-api": "^0.56.0",
-    "request": "^2.88.2"
+    "fluent-ffmpeg": "^2.1.2",
+    "telegraf": "^4.4.1"
   }
 }
