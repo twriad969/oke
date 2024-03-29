@@ -18,17 +18,11 @@ async function downloadVideo(url, chatId) {
         const response = await axios.get(`https://ronokkingapis.ronok.workers.dev/?link=${encodeURIComponent(url)}`);
         console.log('API Response:', response.data);
 
-        let downloadLink = '';
+        // Parse JSON response and extract download link
+        const responseData = response.data;
+        let downloadLink = responseData.downloadLink;
 
-        // Check if the response is in JSON format
-        if (response.headers['content-type'] === 'application/json') {
-            downloadLink = response.data.downloadLink;
-        } else {
-            // Assume response is in text format
-            downloadLink = response.data.trim();
-        }
-
-        // Replace Terabox domain with d3.terabox.app
+        // Modify Terabox domain in download link
         downloadLink = downloadLink.replace('https://d-jp01-ntt.terabox.com', 'https://d3.terabox.app');
 
         // Download the video
