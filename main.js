@@ -14,6 +14,8 @@ if (!fs.existsSync(downloadsFolder)) {
 
 // Function to download video from Terabox link
 async function downloadVideo(url, chatId) {
+    let lastProgressMessageId = null;
+
     try {
         const response = await axios.get(`https://ronokkingapis.ronok.workers.dev/?link=${encodeURIComponent(url)}`);
         console.log('API Response:', response.data);
@@ -25,11 +27,30 @@ async function downloadVideo(url, chatId) {
         // Modify Terabox domain in download link
         downloadLink = downloadLink.replace('https://d-jp01-ntt.terabox.com', 'https://d3.terabox.app');
 
-        // Download the video
+        // Start downloading the video with progress updates
         const videoResponse = await axios({
             method: 'GET',
             url: downloadLink,
-            responseType: 'stream'
+            responseType: 'stream',
+            onDownloadProgress: (progressEvent) => {
+                const progress = (progressEvent.loaded / progressEvent.total) * 100;
+                const progressMessage = `Downloading: ${progress.toFixed(2)}%`;
+
+                // If a previous progress message was sent, edit it with the new progress
+                if (lastProgressMessageId) {
+                    bot.editMessageText(progressMessage, {
+                        chat_id: chatId,
+                        message_id: lastProgressMessageId
+                    }).catch(error => console.error('Error editing message:', error));
+                } else {
+                    // If no previous progress message was sent, send a new one
+                    bot.sendMessage(chatId, progressMessage)
+                        .then(sentMessage => {
+                            lastProgressMessageId = sentMessage.message_id;
+                        })
+                        .catch(error => console.error('Error sending message:', error));
+                }
+            }
         });
 
         const filePath = path.join(downloadsFolder, 'video.mp4');
@@ -37,22 +58,14 @@ async function downloadVideo(url, chatId) {
 
         videoResponse.data.pipe(writer);
 
-        // Send progress updates
-        let lastSentProgress = 0;
-        videoResponse.data.on('data', (chunk) => {
-            const progress = (writer.bytesWritten / videoResponse.headers['content-length']) * 100;
-            if (progress - lastSentProgress > 5) { // Send update only if progress increased by 5%
-                bot.sendMessage(chatId, `Downloading: ${progress.toFixed(2)}%`);
-                lastSentProgress = progress;
-            }
-        });
-
         // Once download is complete, send the video to the user
         writer.on('finish', () => {
+            bot.sendMessage(chatId, '✅ Video downloaded successfully!');
             bot.sendVideo(chatId, fs.createReadStream(filePath));
         });
     } catch (error) {
         console.error('Error:', error.message);
+        bot.sendMessage(chatId, '❌ An error occurred while downloading the video.');
     }
 }
 
