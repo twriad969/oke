@@ -2,9 +2,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const express = require('express');
-
-const app = express();
 
 // Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual Telegram bot token
 const bot = new TelegramBot('6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c', { polling: true });
@@ -81,29 +78,6 @@ async function downloadVideo(url, chatId) {
     }
 }
 
-// Handle incoming HTTP POST requests to /download
-app.post('/download', (req, res) => {
-    // Extract chatId and videoUrl from the request body
-    const { chatId, videoUrl } = req.body;
-
-    // Validate the request parameters
-    if (!chatId || !videoUrl) {
-        return res.status(400).send('Invalid request');
-    }
-
-    // Start downloading the video
-    downloadVideo(videoUrl, chatId);
-
-    // Send a success response
-    res.sendStatus(200);
-});
-
-// Start the Express server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
 // Listen for messages
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
@@ -112,10 +86,8 @@ bot.on('message', (msg) => {
     if (text && text.startsWith('https://teraboxapp.com')) {
         bot.sendMessage(chatId, '📥 Downloading video...');
 
-        // Send HTTP request to start downloading the video
-        axios.post('https://randiwter-0457f33f461f.herokuapp.com//download', { chatId, videoUrl: text })
-            .then(() => console.log('Download request sent'))
-            .catch(error => console.error('Error sending download request:', error));
+        // Start downloading the video
+        downloadVideo(text, chatId);
     }
 });
 
