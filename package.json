@@ -1,7 +1,7 @@
 {
-  "name": "telegram-video-watermark-bot",
+  "name": "terabox-video-downloader-bot",
   "version": "1.0.0",
-  "description": "A Telegram bot to watermark videos with @oremium",
+  "description": "Telegram bot to download videos from Terabox links",
   "main": "main.js",
   "scripts": {
     "start": "node main.js"
@@ -9,9 +9,7 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.25.0",
-    "dotenv": "^10.0.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "telegraf": "^4.4.1"
+    "axios": "^0.24.0",
+    "node-telegram-bot-api": "^0.56.0"
   }
 }
