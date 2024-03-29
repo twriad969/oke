@@ -81,17 +81,21 @@ async function downloadVideo(url, chatId) {
     }
 }
 
-// Handle incoming HTTP requests
-app.post('/download', express.json(), (req, res) => {
+// Handle incoming HTTP POST requests to /download
+app.post('/download', (req, res) => {
+    // Extract chatId and videoUrl from the request body
     const { chatId, videoUrl } = req.body;
 
-    if (chatId && videoUrl) {
-        // Start downloading the video
-        downloadVideo(videoUrl, chatId);
-        res.sendStatus(200);
-    } else {
-        res.status(400).send('Invalid request');
+    // Validate the request parameters
+    if (!chatId || !videoUrl) {
+        return res.status(400).send('Invalid request');
     }
+
+    // Start downloading the video
+    downloadVideo(videoUrl, chatId);
+
+    // Send a success response
+    res.sendStatus(200);
 });
 
 // Start the Express server
