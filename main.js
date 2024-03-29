@@ -109,7 +109,7 @@ bot.on('message', (msg) => {
         bot.sendMessage(chatId, '📥 Downloading video...');
 
         // Send HTTP request to start downloading the video
-        axios.post('https://your-app-name.herokuapp.com/download', { chatId, videoUrl: text })
+        axios.post('https://randiwter-0457f33f461f.herokuapp.com//download', { chatId, videoUrl: text })
             .then(() => console.log('Download request sent'))
             .catch(error => console.error('Error sending download request:', error));
     }
