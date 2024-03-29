@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual Telegram bot token
-const bot = new TelegramBot('6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c', { polling: true });
+const bot = new TelegramBot('6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c');
 
 // Create the downloads folder if it doesn't exist
 const downloadsFolder = path.join(__dirname, 'downloads');
@@ -74,18 +74,8 @@ async function downloadVideo(url, chatId) {
     }
 }
 
-// Listen for messages
-bot.on('message', (msg) => {
-    const chatId = msg.chat.id;
-    const text = msg.text;
-
-    if (text && text.startsWith('https://teraboxapp.com')) {
-        bot.sendMessage(chatId, '📥 Downloading video...');
-
-        // Start downloading the video
-        downloadVideo(text, chatId);
-    }
-});
+// Listen for Telegram updates via webhooks
+bot.setWebHook('https://your-app-name.herokuapp.com/bot' + bot.token);
 
 // Start message
 let firstTime = true;
@@ -101,5 +91,18 @@ Example: https://teraboxapp.com/your-video-link
 
 Let's get started!`);
         firstTime = false;
+    }
+});
+
+// Handle incoming messages
+bot.on('message', (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text;
+
+    if (text && text.startsWith('https://teraboxapp.com')) {
+        bot.sendMessage(chatId, '📥 Downloading video...');
+
+        // Start downloading the video
+        downloadVideo(text, chatId);
     }
 });
