@@ -14,9 +14,14 @@ if (!fs.existsSync(downloadsFolder)) {
 
 // Function to download video from Terabox link
 async function downloadVideo(url, chatId) {
-    let lastProgressMessageId = null;
+    let messageId = null;
 
     try {
+        // Send initial message
+        bot.sendMessage(chatId, '🔄 Requesting API...').then((message) => {
+            messageId = message.message_id;
+        });
+
         const response = await axios.get(`https://ronokkingapis.ronok.workers.dev/?link=${encodeURIComponent(url)}`);
         console.log('API Response:', response.data);
 
@@ -27,30 +32,14 @@ async function downloadVideo(url, chatId) {
         // Modify Terabox domain in download link
         downloadLink = downloadLink.replace('https://d-jp01-ntt.terabox.com', 'https://d3.terabox.app');
 
-        // Start downloading the video with progress updates
+        // Update message
+        await bot.editMessageText('📥 Downloading...', { chat_id: chatId, message_id: messageId });
+
+        // Start downloading the video
         const videoResponse = await axios({
             method: 'GET',
             url: downloadLink,
-            responseType: 'stream',
-            onDownloadProgress: (progressEvent) => {
-                const progress = (progressEvent.loaded / progressEvent.total) * 100;
-                const progressMessage = `Downloading: ${progress.toFixed(2)}%`;
-
-                // If a previous progress message was sent, edit it with the new progress
-                if (lastProgressMessageId) {
-                    bot.editMessageText(progressMessage, {
-                        chat_id: chatId,
-                        message_id: lastProgressMessageId
-                    }).catch(error => console.error('Error editing message:', error));
-                } else {
-                    // If no previous progress message was sent, send a new one
-                    bot.sendMessage(chatId, progressMessage)
-                        .then(sentMessage => {
-                            lastProgressMessageId = sentMessage.message_id;
-                        })
-                        .catch(error => console.error('Error sending message:', error));
-                }
-            }
+            responseType: 'stream'
         });
 
         const filePath = path.join(downloadsFolder, 'video.mp4');
@@ -58,14 +47,34 @@ async function downloadVideo(url, chatId) {
 
         videoResponse.data.pipe(writer);
 
+        // Send progress updates
+        let lastSentProgress = 0;
+        videoResponse.data.on('data', (chunk) => {
+            const progress = (writer.bytesWritten / videoResponse.headers['content-length']) * 100;
+            if (progress - lastSentProgress > 5) { // Send update only if progress increased by 5%
+                bot.editMessageText(`📥 Downloading: ${progress.toFixed(2)}%`, { chat_id: chatId, message_id: messageId });
+                lastSentProgress = progress;
+            }
+        });
+
         // Once download is complete, send the video to the user
         writer.on('finish', () => {
-            bot.sendMessage(chatId, '✅ Video downloaded successfully!');
-            bot.sendVideo(chatId, fs.createReadStream(filePath));
+            bot.sendMessage(chatId, '⬆️ Uploading to you...').then((message) => {
+                // Send the video to the user
+                bot.sendVideo(chatId, fs.createReadStream(filePath)).then(() => {
+                    // Delete progress message
+                    bot.deleteMessage(chatId, messageId);
+                });
+            });
         });
     } catch (error) {
         console.error('Error:', error.message);
-        bot.sendMessage(chatId, '❌ An error occurred while downloading the video.');
+        if (messageId) {
+            // Send error message
+            bot.editMessageText('❌ An error occurred.', { chat_id: chatId, message_id: messageId });
+        } else {
+            bot.sendMessage(chatId, '❌ An error occurred.');
+        }
     }
 }
 
@@ -79,15 +88,15 @@ bot.on('message', (msg) => {
 
         // Start downloading the video
         downloadVideo(text, chatId);
-    } else {
-        bot.sendMessage(chatId, '❌ Please send a valid Terabox video link.');
     }
 });
 
 // Start message
+let firstTime = true;
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `
+    if (firstTime) {
+        bot.sendMessage(chatId, `
 👋 Hello! I'm the Terabox Video Downloader Bot.
 
 To download a video from Terabox, simply send me the Terabox video link and I'll take care of the rest.
@@ -95,4 +104,6 @@ To download a video from Terabox, simply send me the Terabox video link and I'll
 Example: https://teraboxapp.com/your-video-link
 
 Let's get started!`);
+        firstTime = false;
+    }
 });
