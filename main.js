@@ -1,88 +1,91 @@
-const { Telegraf } = require('telegraf');
+const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
-const ffmpeg = require('fluent-ffmpeg');
 
-const bot = new Telegraf('6806028440:AAG_xNXCcfLuHAgGNZ_dn7PfJ3bHukjxd3Y');
+// Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual Telegram bot token
+const bot = new TelegramBot('6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c', { polling: true });
 
-bot.start((ctx) => {
-    ctx.reply('Welcome to the Video Watermark Bot! Send me a video file to watermark it with @oremium.');
-});
-
-bot.on('video', async (ctx) => {
-    const video = ctx.message.video;
-    const videoSizeMB = Math.ceil(video.file_size / (1024 * 1024)); // Convert bytes to MB
-
-    // Check if the video size is below a certain threshold before watermarking
-    const MAX_VIDEO_SIZE_MB = 50; // Set your desired threshold (e.g., 50 MB)
-    if (videoSizeMB > MAX_VIDEO_SIZE_MB) {
-        ctx.reply(`Sorry, the video size exceeds the maximum allowed limit (${MAX_VIDEO_SIZE_MB} MB). Please send a smaller video.`);
-        return;
-    }
-
-    // Create a downloads folder if it doesn't exist
-    const downloadsFolderPath = './downloads';
-    if (!fs.existsSync(downloadsFolderPath)) {
-        fs.mkdirSync(downloadsFolderPath);
-    }
-
-    // Download video
-    const videoPath = path.join(downloadsFolderPath, `${video.file_id}.mp4`);
-    const writer = fs.createWriteStream(videoPath);
-
-    const response = await axios({
-        url: `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${video.file_path}`,
-        method: 'GET',
-        responseType: 'stream'
-    });
-
-    response.data.pipe(writer);
-
-    await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-    });
-
-    // Watermark video
-    const watermarkedVideoPath = path.join(downloadsFolderPath, `${video.file_id}_watermarked.mp4`);
-    const watermarkText = '@oremium';
-    await watermarkVideo(videoPath, watermarkedVideoPath, watermarkText, ctx);
-
-    // Send watermarked video
-    await ctx.replyWithVideo({ source: watermarkedVideoPath });
-
-    // Delete downloaded files
-    fs.unlinkSync(videoPath);
-    fs.unlinkSync(watermarkedVideoPath);
-});
-
-async function watermarkVideo(inputPath, outputPath, text, ctx) {
-    return new Promise((resolve, reject) => {
-        const command = ffmpeg(inputPath)
-            .videoFilters(`drawtext=text='${text}':x=(w-text_w)/2:y=h-th-10:fontsize=24:fontcolor=white`)
-            .output(outputPath)
-            .on('start', (commandLine) => {
-                console.log('FFmpeg command: ', commandLine);
-                ctx.reply('Watermarking video. This might take a while...');
-            })
-            .on('progress', (progress) => {
-                console.log('Processing: ' + progress.percent + '% done');
-                ctx.reply(`Processing: ${progress.percent.toFixed(2)}% done`);
-            })
-            .on('error', (err) => {
-                console.error('Error during processing', err);
-                ctx.reply('Error during processing: ' + err.message);
-                reject(err);
-            })
-            .on('end', () => {
-                console.log('Processing finished successfully');
-                ctx.reply('Watermarking finished successfully!');
-                resolve();
-            });
-
-        command.run();
-    });
+// Create the downloads folder if it doesn't exist
+const downloadsFolder = path.join(__dirname, 'downloads');
+if (!fs.existsSync(downloadsFolder)) {
+    fs.mkdirSync(downloadsFolder);
 }
 
-bot.launch();
+// Function to download video from Terabox link
+async function downloadVideo(url, chatId) {
+    try {
+        const response = await axios.get(`https://ronokkingapis.ronok.workers.dev/?link=${encodeURIComponent(url)}`);
+        console.log('API Response:', response.data);
+
+        let downloadLink = '';
+
+        // Check if the response is in JSON format
+        if (response.headers['content-type'] === 'application/json') {
+            downloadLink = response.data.downloadLink;
+        } else {
+            // Assume response is in text format
+            downloadLink = response.data.trim();
+        }
+
+        // Replace Terabox domain with d3.terabox.app
+        downloadLink = downloadLink.replace('https://d-jp01-ntt.terabox.com', 'https://d3.terabox.app');
+
+        // Download the video
+        const videoResponse = await axios({
+            method: 'GET',
+            url: downloadLink,
+            responseType: 'stream'
+        });
+
+        const filePath = path.join(downloadsFolder, 'video.mp4');
+        const writer = fs.createWriteStream(filePath);
+
+        videoResponse.data.pipe(writer);
+
+        // Send progress updates
+        let lastSentProgress = 0;
+        videoResponse.data.on('data', (chunk) => {
+            const progress = (writer.bytesWritten / videoResponse.headers['content-length']) * 100;
+            if (progress - lastSentProgress > 5) { // Send update only if progress increased by 5%
+                bot.sendMessage(chatId, `Downloading: ${progress.toFixed(2)}%`);
+                lastSentProgress = progress;
+            }
+        });
+
+        // Once download is complete, send the video to the user
+        writer.on('finish', () => {
+            bot.sendVideo(chatId, fs.createReadStream(filePath));
+        });
+    } catch (error) {
+        console.error('Error:', error.message);
+    }
+}
+
+// Listen for messages
+bot.on('message', (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text;
+
+    if (text && text.startsWith('https://teraboxapp.com')) {
+        bot.sendMessage(chatId, '📥 Downloading video...');
+
+        // Start downloading the video
+        downloadVideo(text, chatId);
+    } else {
+        bot.sendMessage(chatId, '❌ Please send a valid Terabox video link.');
+    }
+});
+
+// Start message
+bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, `
+👋 Hello! I'm the Terabox Video Downloader Bot.
+
+To download a video from Terabox, simply send me the Terabox video link and I'll take care of the rest.
+
+Example: https://teraboxapp.com/your-video-link
+
+Let's get started!`);
+});
