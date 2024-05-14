@@ -2,12 +2,11 @@
   "name": "your-app-name",
   "version": "1.0.0",
   "description": "Description of your Node.js application",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "axios": "^0.24.0",
-    "express": "^4.17.2"
+    "express": "^4.17.1"
   }
 }
