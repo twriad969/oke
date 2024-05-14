@@ -1,108 +1,49 @@
-const TelegramBot = require('node-telegram-bot-api');
+const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
-const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
-// Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual Telegram bot token
-const bot = new TelegramBot('6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c');
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Create the downloads folder if it doesn't exist
-const downloadsFolder = path.join(__dirname, 'downloads');
-if (!fs.existsSync(downloadsFolder)) {
-    fs.mkdirSync(downloadsFolder);
-}
+app.use(express.urlencoded({ extended: true }));
 
-// Function to download video from Terabox link
-async function downloadVideo(url, chatId) {
-    let lastProgressMessageId = null;
-
-    try {
-        const response = await axios.get(`https://ronokkingapis.ronok.workers.dev/?link=${encodeURIComponent(url)}`);
-        console.log('API Response:', response.data);
-
-        // Parse JSON response and extract download link
-        const responseData = response.data;
-        let downloadLink = responseData.downloadLink;
-
-        // Modify Terabox domain in download link
-        downloadLink = downloadLink.replace('https://d-jp01-ntt.terabox.com', 'https://d3.terabox.app');
-
-        // Start downloading the video with progress updates
-        const videoResponse = await axios({
-            method: 'GET',
-            url: downloadLink,
-            responseType: 'stream',
-            onDownloadProgress: (progressEvent) => {
-                const progress = (progressEvent.loaded / progressEvent.total) * 100;
-                const progressMessage = `📥 Downloading: ${progress.toFixed(2)}%`;
-
-                // If a previous progress message was sent, edit it with the new progress
-                if (lastProgressMessageId) {
-                    bot.editMessageText(progressMessage, {
-                        chat_id: chatId,
-                        message_id: lastProgressMessageId,
-                        parse_mode: 'Markdown'
-                    }).catch(error => console.error('Error editing message:', error));
-                } else {
-                    // If no previous progress message was sent, send a new one
-                    bot.sendMessage(chatId, progressMessage, { parse_mode: 'Markdown' })
-                        .then(sentMessage => {
-                            lastProgressMessageId = sentMessage.message_id;
-                        })
-                        .catch(error => console.error('Error sending message:', error));
-                }
-            }
-        });
-
-        const filePath = path.join(downloadsFolder, 'video.mp4');
-        const writer = fs.createWriteStream(filePath);
-
-        videoResponse.data.pipe(writer);
-
-        // Once download is complete, send the video to the user
-        writer.on('finish', () => {
-            // Send upload completion message
-            bot.deleteMessage(chatId, lastProgressMessageId).catch(error => console.error('Error deleting message:', error));
-            bot.sendMessage(chatId, '✅ Video downloaded and uploaded successfully!', { parse_mode: 'Markdown' });
-
-            // Send the video to the user
-            bot.sendVideo(chatId, fs.createReadStream(filePath));
-        });
-    } catch (error) {
-        console.error('Error:', error.message);
-        bot.sendMessage(chatId, '❌ An error occurred while downloading the video.', { parse_mode: 'Markdown' });
+app.get('/', (req, res) => {
+    const videoUrl = req.query.url;
+    if (!videoUrl) {
+        return res.status(400).send('Please provide a video URL using the "url" query parameter.');
     }
-}
 
-// Listen for Telegram updates via webhooks
-bot.setWebHook('https://your-app-name.herokuapp.com/bot' + bot.token);
-
-// Start message
-let firstTime = true;
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    if (firstTime) {
-        bot.sendMessage(chatId, `
-👋 Hello! I'm the Terabox Video Downloader Bot.
-
-To download a video from Terabox, simply send me the Terabox video link and I'll take care of the rest.
-
-Example: https://teraboxapp.com/your-video-link
-
-Let's get started!`);
-        firstTime = false;
-    }
+    downloadVideo(videoUrl)
+        .then((downloadId) => {
+            res.send(`/downloads/${downloadId}.mp4`);
+        })
+        .catch((error) => {
+            console.error('Error occurred during download:', error);
+            res.status(500).send('Failed to download video');
+        });
 });
 
-// Handle incoming messages
-bot.on('message', (msg) => {
-    const chatId = msg.chat.id;
-    const text = msg.text;
+async function downloadVideo(videoUrl) {
+    const downloadId = uuidv4();
+    const response = await axios({
+        url: videoUrl,
+        method: 'GET',
+        responseType: 'stream'
+    });
 
-    if (text && text.startsWith('https://teraboxapp.com')) {
-        bot.sendMessage(chatId, '📥 Downloading video...');
+    const filePath = `./downloads/${downloadId}.mp4`;
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
 
-        // Start downloading the video
-        downloadVideo(text, chatId);
-    }
+    await new Promise((resolve, reject) => {
+        response.data.on('end', resolve);
+        response.data.on('error', reject);
+    });
+
+    return downloadId;
+}
+
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
