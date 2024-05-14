@@ -1,16 +1,13 @@
 {
-  "name": "terabox-video-downloader",
+  "name": "your-app-name",
   "version": "1.0.0",
-  "description": "A Telegram bot for downloading videos from Terabox links.",
-  "main": "index.js",
+  "description": "Description of your Node.js application",
+  "main": "main.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node main.js"
   },
-  "author": "Your Name",
-  "license": "MIT",
   "dependencies": {
     "axios": "^0.24.0",
-    "express": "^4.17.2",
-    "node-telegram-bot-api": "^0.53.0"
+    "express": "^4.17.2"
   }
 }
