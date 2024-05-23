@@ -10,10 +10,12 @@ import time
 
 app = Flask(__name__)
 
-# Load cookies from cookies.json file
 def load_cookies_from_file(filename):
     with open(filename, 'r') as f:
         cookies = json.load(f)
+    # Set SameSite attribute to "None" for each cookie
+    for cookie in cookies:
+        cookie['sameSite'] = 'None'
     return cookies
 
 # Function to execute Selenium script and return the download link
