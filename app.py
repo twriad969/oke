@@ -4,7 +4,6 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import urlparse
 import os
 import time
@@ -21,16 +20,16 @@ def load_cookies_from_file(filename):
 def get_download_link(link, cookies_file):
     # Configure ChromeOptions for headless mode
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
 
     # Load cookies from file
     cookies = load_cookies_from_file(cookies_file)
 
-    # Initialize the WebDriver with loaded cookies
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
-    driver.get("https://mdiskplay.com/")
+    # Initialize the WebDriver with specified Chrome binary location
+    driver = webdriver.Chrome(options=chrome_options)
 
     # Add cookies to the browser session
     for cookie in cookies:
