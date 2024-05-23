@@ -1,46 +1,28 @@
-import json
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from urllib.parse import urlparse
 import os
 import time
 
 app = Flask(__name__)
 
-def load_cookies_from_file(filename):
-    with open(filename, 'r') as f:
-        cookies = json.load(f)
-    # Set SameSite attribute to "None" for each cookie
-    for cookie in cookies:
-        cookie['sameSite'] = 'None'
-    return cookies
-
 # Function to execute Selenium script and return the download link
-def get_download_link(link, cookies_file):
-    # Configure ChromeOptions for headless mode
+def get_download_link(link):
+    # Configure ChromeOptions
     chrome_options = webdriver.ChromeOptions()
     chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
-    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-
-    # Load cookies from file
-    cookies = load_cookies_from_file(cookies_file)
 
     # Initialize the WebDriver with specified Chrome binary location
     driver = webdriver.Chrome(options=chrome_options)
 
-    # Add cookies to the browser session
-    for cookie in cookies:
-        driver.add_cookie(cookie)
-
     # Navigate to the website
     driver.get("https://mdiskplay.com/")
 
-    # Check if the link parameter is provided in the request
+    # Check if the link parameter is provided
     if link:
         # Click the input field to paste the link
         input_field = driver.find_element(By.XPATH, '//*[@id="__next"]/div/div/div/main/div[2]/div/div[2]/div/input')
@@ -66,29 +48,24 @@ def get_download_link(link, cookies_file):
     # After 10 seconds, construct the download link
     time.sleep(10)
     current_url = driver.current_url
-    parsed_url = urlparse(current_url)
-    path_parts = parsed_url.path.split('/')
-    desired_string = path_parts[-1] if path_parts[-1] else path_parts[-2]  # Get the last non-empty part of the path
-    download_link = f"https://download.mdiskplay.com/video/{desired_string}.mp4"
+    download_link = current_url
     
-    # Close the WebDriver
-    driver.quit()
+    # No need to close the WebDriver for browser visibility
     
     return download_link
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    # Get the link parameter from the request
-    link = request.args.get('link')
-    
-    # Path to cookies file
-    cookies_file = 'cookies.json'
-    
-    # Execute Selenium script to get the download link
-    download_link = get_download_link(link, cookies_file)
-    
-    # Return the response as JSON
-    return jsonify({"download_link": download_link})
+    if request.method == 'POST':
+        link = request.form['link']
+        
+        # Execute Selenium script to get the download link
+        download_link = get_download_link(link)
+        
+        # Return the response as JSON
+        return jsonify({"download_link": download_link})
+    else:
+        return render_template('index.html')
 
 if __name__ == '__main__':
     # Heroku sets PORT environment variable
