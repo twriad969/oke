@@ -28,7 +28,7 @@ def get_download_links(url):
         )
 
         # Wait for 10 seconds
-        time.sleep(10)
+        time.sleep(7)
 
         # Define multiple selectors for the buttons
         selectors = [
