@@ -12,8 +12,6 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
 
-driver = webdriver.Chrome(options=chrome_options)
-
 @app.route('/')
 def extract_id_and_generate_response():
     link = request.args.get('link')
@@ -23,20 +21,21 @@ def extract_id_and_generate_response():
     unique_id = link.split('/')[-1][1:]
     new_url = f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
 
-    try:
-        driver.get(new_url)
-        # Wait for the page to fully load (you can adjust the wait time as needed)
-        time.sleep(5)
+    with webdriver.Chrome(options=chrome_options) as driver:
+        try:
+            driver.get(new_url)
+            # Wait for the page to fully load (you can adjust the wait time as needed)
+            time.sleep(5)
 
-        # Check if the page is fully loaded
-        if "404 Not Found" not in driver.title:
-            response = {'response': new_url}
-        else:
-            response = {'error': 'Failed to load content'}
+            # Check if the page is fully loaded
+            if "404 Not Found" not in driver.title:
+                response = {'response': new_url}
+            else:
+                response = {'error': 'Failed to load content'}
 
-    finally:
-        # Close the browser
-        driver.quit()
+        except Exception as e:
+            # Handle any exceptions here
+            response = {'error': str(e)}
 
     return jsonify(response)
 
