@@ -24,10 +24,10 @@ def extract_id_and_generate_response():
 
     try:
         with webdriver.Chrome(options=chrome_options) as driver:
-            driver.set_page_load_timeout(20)  # Set a reasonable timeout
+            driver.set_page_load_timeout(7)  # Set a reasonable timeout
             driver.get(new_url)
             # Wait for the page to fully load
-            driver.implicitly_wait(10)  # Adjust the wait time as needed
+            driver.implicitly_wait(5)  # Adjust the wait time as needed
 
             # Check if the page is fully loaded
             if "404 Not Found" not in driver.title:
