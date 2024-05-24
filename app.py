@@ -26,7 +26,7 @@ def extract_id_and_generate_response():
     new_url = f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
 
     # Setting up the Chrome WebDriver
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver"), options=chrome_options)
+    driver = webdriver.Chrome(options=chrome_options)
 
     try:
         # Loading the page
