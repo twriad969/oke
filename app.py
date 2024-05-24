@@ -3,10 +3,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
 import time
-import logging
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
@@ -30,7 +26,6 @@ def extract_id_and_generate_response():
     try:
         driver = create_webdriver()
         driver.get(new_url)
-        # Reducing sleep time to 2 seconds to ensure quicker response
         time.sleep(2)
 
         if "404 Not Found" not in driver.title:
@@ -38,9 +33,7 @@ def extract_id_and_generate_response():
         else:
             response = {'error': 'Failed to load content'}
         
-        logging.info(f"Processed link: {link}, response: {response}")
     except Exception as e:
-        logging.error(f"Error processing link: {link}, error: {str(e)}")
         response = {'error': str(e)}
     finally:
         driver.quit()
