@@ -1,8 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 import os
-import asyncio
 
 app = Flask(__name__)
 
@@ -12,39 +12,34 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
 
-async def check_content(new_url):
-    try:
-        with webdriver.Chrome(options=chrome_options) as driver:
-            driver.get(new_url)
-            # Wait for the page to fully load (you can adjust the wait time as needed)
-            await asyncio.sleep(2)
-
-            # Check if the page is fully loaded
-            if "404 Not Found" not in driver.title:
-                return {'response': new_url}
-            else:
-                return {'error': 'Failed to load content'}
-    except Exception as e:
-        # Handle any exceptions here
-        return {'error': str(e)}
-
 @app.route('/')
-def extract_id_and_generate_response():
+def open_link():
+    # Get the link parameter from the URL
     link = request.args.get('link')
     if not link:
-        return jsonify({'error': 'No link provided'})
+        return "No link provided", 400
+    
+    # Initialize the Chrome WebDriver using the provided binary location
+    chrome_driver_path = ChromeDriverManager().install()
+    driver = webdriver.Chrome(executable_path=chrome_driver_path, options=chrome_options)
 
-    unique_id = link.split('/')[-1][1:]
-    new_url = f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
+    try:
+        # Navigate to the specified URL
+        driver.get(link)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    result = loop.run_until_complete(check_content(new_url))
-    loop.close()
+        # Wait for a few seconds to allow the page to load
+        driver.implicitly_wait(3)  # Adjust this time as needed
+        
+        # Get the current URL after the page has loaded
+        current_url = driver.current_url
 
-    return jsonify(result)
+    finally:
+        # Close the browser
+        driver.quit()
+        # Remove ChromeDriver log files to avoid cluttering Heroku's filesystem
+        os.remove(chrome_driver_path)
+
+    return f"Automation done. Current URL: {current_url}", 200
 
 if __name__ == '__main__':
-    # Running the app on the specified port
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=True, port=int(os.environ.get('PORT', 5000)))
