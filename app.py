@@ -1,14 +1,12 @@
 from flask import Flask, request, jsonify
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 import os
 import time
 
 app = Flask(__name__)
 
-chrome_options = webdriver.ChromeOptions()
+chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
@@ -45,4 +43,4 @@ def extract_id_and_generate_response():
 if __name__ == '__main__':
     # Running the app on the specified port
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, port=port)
+    app.run(debug=True, host='0.0.0.0', port=port)
