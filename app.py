@@ -8,12 +8,22 @@ app = Flask(__name__)
 chrome_options = Options()
 chrome_options.add_argument("--headless")  # Run Chrome in headless mode (without UI)
 chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
+chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration
 
 # Configure Chrome to run in Heroku
-chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
+chrome_options.binary_location = '/app/.apt/usr/bin/google-chrome'
 chrome_options.add_argument("--no-sandbox")
 
-@app.route('/')
+# Keep a single instance of the WebDriver for efficiency
+driver = None
+
+def get_driver():
+    global driver
+    if driver is None:
+        driver = webdriver.Chrome(options=chrome_options)
+    return driver
+
+@app.route('/api/extract', methods=['GET'])
 def extract_id_and_generate_response():
     link = request.args.get('link')
     if not link:
@@ -25,14 +35,14 @@ def extract_id_and_generate_response():
     # Constructing the new URL based on the extracted ID
     new_url = f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
 
-    # Setting up the Chrome WebDriver
-    driver = webdriver.Chrome(options=chrome_options)
-
     try:
+        # Using the WebDriver instance
+        driver = get_driver()
+
         # Loading the page
         driver.get(new_url)
 
-        # Waiting for the page to load completely (you can adjust the time as needed)
+        # Waiting for the page to load completely
         driver.implicitly_wait(10)  # Adjust the wait time as needed
 
         # Checking if the page is fully loaded
@@ -41,9 +51,10 @@ def extract_id_and_generate_response():
         else:
             return jsonify({'error': 'Failed to load content'})
 
-    finally:
-        # Closing the WebDriver
-        driver.quit()
+    except Exception as e:
+        # Log the error for debugging
+        print(f"An error occurred: {str(e)}")
+        return jsonify({'error': 'An error occurred while processing the request'})
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
