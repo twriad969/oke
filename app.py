@@ -25,7 +25,7 @@ def extract_id_and_generate_response():
         try:
             driver.get(new_url)
             # Wait for the page to fully load (you can adjust the wait time as needed)
-            time.sleep(5)
+            time.sleep(2)
 
             # Check if the page is fully loaded
             if "404 Not Found" not in driver.title:
