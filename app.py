@@ -1,49 +1,58 @@
 from flask import Flask, request, jsonify
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-import os
-import logging
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
 
 app = Flask(__name__)
-logger = logging.getLogger(__name__)
 
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
-
-@app.route('/')
-def extract_id_and_generate_response():
-    link = request.args.get('link')
+def process_link(link):
     if not link:
-        return jsonify({'error': 'No link provided'})
-
-    unique_id = link.split('/')[-1][1:]
-    new_url = f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
+        return None
 
     try:
-        with webdriver.Chrome(options=chrome_options) as driver:
-            driver.set_page_load_timeout(7)  # Set a reasonable timeout
-            driver.get(new_url)
-            # Wait for the page to fully load
-            driver.implicitly_wait(1)  # Adjust the wait time as needed
+        unique_id = link.split('/')[-1][1:]  # Extract unique ID and remove the first character
+        modified_link = f"https://mdiskplay.com/terabox/{unique_id}"
 
-            # Check if the page is fully loaded
-            if "404 Not Found" not in driver.title:
-                response = {'response': new_url}
-            else:
-                response = {'error': 'Failed to load content'}
+        # Set up Selenium options
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
 
+        driver = webdriver.Chrome(options=chrome_options)
+
+        # Open the modified link
+        driver.get(modified_link)
+
+        # Wait for the page to fully load
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+
+        # Wait for an additional 3 seconds to ensure all elements are loaded
+        time.sleep(3)
+        
+        driver.quit()
+
+        return f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
     except Exception as e:
-        logger.error("An error occurred: %s", str(e))
-        response = {'error': 'Failed to fetch content'}
+        print(f"An error occurred: {e}")
+        if 'driver' in locals():
+            driver.quit()
+        return None
 
-    return jsonify(response)
+@app.route('/')
+def index():
+    link = request.args.get('link')
+    if not link:
+        return jsonify({"status": "error", "message": "No link provided"})
+
+    modified_link = process_link(link)
+    if modified_link:
+        return jsonify({"status": "done", "url": modified_link})
+    else:
+        return jsonify({"status": "error", "message": "Failed to process link"})
 
 if __name__ == '__main__':
-    # Configure logging
-    logging.basicConfig(level=logging.INFO)
-    # Running the app on the specified port
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=True)
