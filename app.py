@@ -10,7 +10,6 @@ logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
-# Function to create Chrome WebDriver with options
 def create_webdriver():
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -27,11 +26,12 @@ def extract_id_and_generate_response():
 
     unique_id = link.split('/')[-1][1:]
     new_url = f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
-    
+
     try:
         driver = create_webdriver()
         driver.get(new_url)
-        time.sleep(5)
+        # Reducing sleep time to 2 seconds to ensure quicker response
+        time.sleep(2)
 
         if "404 Not Found" not in driver.title:
             response = {'response': new_url}
@@ -49,4 +49,4 @@ def extract_id_and_generate_response():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host='0.0.0.0', port=port) 
+    app.run(debug=False, host='0.0.0.0', port=port) 
