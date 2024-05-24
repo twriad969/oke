@@ -9,10 +9,10 @@ import time
 app = Flask(__name__)
 
 chrome_options = webdriver.ChromeOptions()
-chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.binary_location = '/app/.chrome-for-testing/chrome-linux64/chrome'
 
 driver = webdriver.Chrome(options=chrome_options)
 
@@ -27,15 +27,22 @@ def extract_id_and_generate_response():
 
     try:
         driver.get(new_url)
+        # Wait for the page to fully load (you can adjust the wait time as needed)
         time.sleep(5)
 
+        # Check if the page is fully loaded
         if "404 Not Found" not in driver.title:
-            return jsonify({'response': new_url})
+            response = {'response': new_url}
         else:
-            return jsonify({'error': 'Failed to load content'})
+            response = {'error': 'Failed to load content'}
 
     finally:
+        # Close the browser
         driver.quit()
 
+    return jsonify(response)
+
 if __name__ == '__main__':
-    app.run(debug=False, port=int(os.environ.get("PORT", 5000)))
+    # Running the app on the specified port
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, port=port)
