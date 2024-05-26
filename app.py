@@ -31,7 +31,7 @@ def process_link(link):
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
 
         # Wait for an additional 3 seconds to ensure all elements are loaded
-        time.sleep(8)
+        time.sleep(10)
         
         driver.quit()
 
