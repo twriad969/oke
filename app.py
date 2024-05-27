@@ -27,15 +27,23 @@ def process_link(link):
         # Open the modified link
         driver.get(modified_link)
 
-        # Wait for the page to fully load
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-
-        # Wait for an additional 3 seconds to ensure all elements are loaded
-        time.sleep(15)
+        # Define the target source URL
+        target_source_url = f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
         
-        driver.quit()
+        try:
+            # Wait for the specific <source> tag to be present on the page
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, f"//source[@src='{target_source_url}' and @type='application/x-mpegURL']")
+                )
+            )
+        except Exception as e:
+            print(f"Error waiting for the source element: {e}")
+            return None
+        finally:
+            driver.quit()
 
-        return f"https://core.mdiskplay.com/box/terabox/video/{unique_id}.m3u8"
+        return target_source_url
     except Exception as e:
         print(f"An error occurred: {e}")
         if 'driver' in locals():
